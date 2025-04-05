@@ -86,6 +86,13 @@ export default function BusinessSignup() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Only submit if we're on the last step
+    if (formStep !== 3) {
+      handleNextStep();
+      return;
+    }
+    
     // In a real app, you would submit the form data to your API here
     console.log('Form submitted:', formData);
     // Redirect to login page or dashboard
@@ -382,8 +389,7 @@ export default function BusinessSignup() {
               
               {formStep < 3 ? (
                 <button
-                  type="button"
-                  onClick={handleNextStep}
+                  type="submit"
                   className="btn-primary ml-auto"
                 >
                   Next
