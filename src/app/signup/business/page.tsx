@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { FaArrowLeft, FaUpload } from 'react-icons/fa';
+import { FaArrowLeft, FaUpload, FaCheck, FaBuilding, FaIdCard, FaGlobe } from 'react-icons/fa';
 
 export default function BusinessSignup() {
   const router = useRouter();
@@ -21,17 +21,58 @@ export default function BusinessSignup() {
     website: '',
     logo: null as File | null,
     aboutCompany: '',
+    verificationMethod: '',
+    businessRegistration: null as File | null,
+    ein: '',
+    businessAddress: '',
+    agreeToVerification: false,
   });
+  
+  const [verificationStatus, setVerificationStatus] = useState<'none' | 'pending' | 'verified'>('none');
+  const [verifying, setVerifying] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData({ ...formData, [name]: checked });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'businessRegistration') => {
     if (e.target.files && e.target.files.length > 0) {
-      setFormData({ ...formData, logo: e.target.files[0] });
+      setFormData({ ...formData, [field]: e.target.files[0] });
     }
+  };
+
+  const verifyBusiness = () => {
+    if (!formData.verificationMethod) {
+      alert('Please select a verification method');
+      return;
+    }
+    
+    if (formData.verificationMethod === 'document' && !formData.businessRegistration) {
+      alert('Please upload your business registration document');
+      return;
+    }
+    
+    if (formData.verificationMethod === 'ein' && !formData.ein) {
+      alert('Please enter your EIN');
+      return;
+    }
+    
+    if (!formData.agreeToVerification) {
+      alert('Please agree to the verification process');
+      return;
+    }
+    
+    setVerifying(true);
+    setTimeout(() => {
+      setVerifying(false);
+      setVerificationStatus('verified');
+    }, 2000);
   };
 
   const validateStep1 = () => {
@@ -72,6 +113,15 @@ export default function BusinessSignup() {
     return true;
   };
 
+  const validateStep3 = () => {
+    if (verificationStatus !== 'verified') {
+      alert('Please complete business verification before proceeding');
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleNextStep = () => {
     if (formStep === 1 && validateStep1()) {
       setFormStep(2);
@@ -87,15 +137,16 @@ export default function BusinessSignup() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Only submit if we're on the last step
     if (formStep !== 3) {
       handleNextStep();
       return;
     }
     
-    // In a real app, you would submit the form data to your API here
+    if (!validateStep3()) {
+      return;
+    }
+    
     console.log('Form submitted:', formData);
-    // Redirect to login page or dashboard
     alert('Account created successfully! Please log in.');
     router.push('/login');
   };
@@ -120,6 +171,12 @@ export default function BusinessSignup() {
     '51-200 employees',
     '201-500 employees',
     '500+ employees'
+  ];
+
+  const verificationMethods = [
+    { value: 'document', label: 'Upload business registration document (LLC, Inc, etc.)' },
+    { value: 'ein', label: 'Verify with EIN (Employer Identification Number)' },
+    { value: 'domain', label: 'Verify with business email domain' }
   ];
 
   return (
@@ -330,8 +387,8 @@ export default function BusinessSignup() {
 
             {formStep === 3 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-medium text-gray-900">Company Profile</h2>
-                <p className="text-sm text-gray-600">Complete your company profile to help students find you</p>
+                <h2 className="text-xl font-medium text-gray-900">Company Profile & Verification</h2>
+                <p className="text-sm text-gray-600">Complete your profile and verify your business</p>
                 
                 <div>
                   <label htmlFor="logo" className="block text-sm font-medium text-gray-700">
@@ -347,7 +404,7 @@ export default function BusinessSignup() {
                         id="logo"
                         accept="image/*"
                         className="sr-only"
-                        onChange={handleFileChange}
+                        onChange={(e) => handleFileChange(e, 'logo')}
                       />
                     </label>
                     <span className="ml-3 text-sm text-gray-500">
@@ -365,13 +422,134 @@ export default function BusinessSignup() {
                     <textarea
                       name="aboutCompany"
                       id="aboutCompany"
-                      rows={5}
+                      rows={3}
                       className="input-field"
                       placeholder="Describe your company, its mission, and the types of projects you're looking to post..."
                       value={formData.aboutCompany}
                       onChange={handleInputChange}
                     ></textarea>
                   </div>
+                </div>
+                
+                <div className="pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">Business Verification</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    To ensure the quality of our platform, we need to verify your business. This helps build trust with potential student applicants.
+                  </p>
+                  
+                  {verificationStatus === 'verified' ? (
+                    <div className="mt-4 bg-green-50 border border-green-200 rounded-md p-4 flex items-center">
+                      <FaCheck className="h-5 w-5 text-green-500 mr-3" />
+                      <div>
+                        <p className="text-green-700 font-medium">Business Verified</p>
+                        <p className="text-green-600 text-sm">Your business has been successfully verified.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-4 space-y-4">
+                        <p className="text-sm font-medium text-gray-700">Select a verification method:</p>
+                        
+                        <div className="space-y-3">
+                          {verificationMethods.map((method) => (
+                            <label key={method.value} className="flex items-start">
+                              <input
+                                type="radio"
+                                name="verificationMethod"
+                                value={method.value}
+                                checked={formData.verificationMethod === method.value}
+                                onChange={handleInputChange}
+                                className="h-4 w-4 mt-1 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="ml-3 text-sm text-gray-700">{method.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                        
+                        {formData.verificationMethod === 'document' && (
+                          <div className="mt-3 ml-7">
+                            <div className="flex items-center">
+                              <label className="btn-secondary flex items-center cursor-pointer text-sm">
+                                <FaIdCard className="h-4 w-4 mr-2" />
+                                Upload Document
+                                <input 
+                                  type="file" 
+                                  name="businessRegistration" 
+                                  accept=".pdf,.doc,.docx,.jpg,.png"
+                                  className="sr-only"
+                                  onChange={(e) => handleFileChange(e, 'businessRegistration')}
+                                />
+                              </label>
+                              <span className="ml-3 text-sm text-gray-500">
+                                {formData.businessRegistration ? formData.businessRegistration.name : 'No file chosen'}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Upload your LLC/Corporation papers, business license, or other official registration.
+                            </p>
+                          </div>
+                        )}
+                        
+                        {formData.verificationMethod === 'ein' && (
+                          <div className="mt-3 ml-7">
+                            <label htmlFor="ein" className="block text-sm font-medium text-gray-700">
+                              EIN (Employer Identification Number)
+                            </label>
+                            <input
+                              type="text"
+                              name="ein"
+                              id="ein"
+                              placeholder="XX-XXXXXXX"
+                              className="input-field mt-1"
+                              value={formData.ein}
+                              onChange={handleInputChange}
+                            />
+                            <p className="mt-1 text-xs text-gray-500">
+                              Your EIN will be used to verify your business with government records.
+                            </p>
+                          </div>
+                        )}
+                        
+                        {formData.verificationMethod === 'domain' && (
+                          <div className="mt-3 ml-7">
+                            <p className="text-sm text-gray-700">
+                              We'll send a verification email to your business email address to confirm domain ownership.
+                            </p>
+                            <div className="mt-2 flex items-center">
+                              <FaGlobe className="h-5 w-5 text-gray-400 mr-2" />
+                              <span className="text-gray-700">{formData.email}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="mt-4">
+                          <label className="flex items-start">
+                            <input
+                              type="checkbox"
+                              name="agreeToVerification"
+                              checked={formData.agreeToVerification}
+                              onChange={handleCheckboxChange}
+                              className="h-4 w-4 mt-1 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                            />
+                            <span className="ml-3 text-sm text-gray-700">
+                              I agree to the verification process and confirm that all information provided is accurate and complete.
+                            </span>
+                          </label>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <button
+                            type="button"
+                            onClick={verifyBusiness}
+                            className="btn-primary w-full sm:w-auto"
+                            disabled={verifying || !formData.verificationMethod || !formData.agreeToVerification}
+                          >
+                            {verifying ? 'Verifying...' : 'Verify Business'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -398,6 +576,7 @@ export default function BusinessSignup() {
                 <button
                   type="submit"
                   className="btn-primary ml-auto"
+                  disabled={verificationStatus !== 'verified'}
                 >
                   Create Account
                 </button>
