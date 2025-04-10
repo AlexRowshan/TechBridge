@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'export',
+  basePath: '/TechBridgeMVP',
+  images: {
+    unoptimized: true,
+  },
 };
 
 module.exports = nextConfig; 
